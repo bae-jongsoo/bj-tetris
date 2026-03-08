@@ -16,6 +16,11 @@
         <button id="restartBtn" type="button">Restart</button>
       </section>
       <section class="board-area">
+        <div id="overlay" class="overlay hidden" aria-live="polite">
+          <h2 id="overlayStatus"></h2>
+          <p id="overlaySub"></p>
+          <button id="overlayAction" type="button"></button>
+        </div>
         <canvas id="gameCanvas" aria-label="Tetris board"></canvas>
       </section>
     </main>

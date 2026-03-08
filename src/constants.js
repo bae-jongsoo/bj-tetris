@@ -2,7 +2,9 @@ export const BOARD_WIDTH = 10;
 export const VISIBLE_HEIGHT = 20;
 export const HIDDEN_HEIGHT = 2;
 export const BOARD_HEIGHT = VISIBLE_HEIGHT + HIDDEN_HEIGHT;
-export const DROP_MS = 800;
+export const BASE_DROP_MS = 800;
+export const SOFT_DROP_FACTOR = 0.2;
+export const MIN_DROP_MS = 100;
 
 export const PIECE_TYPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
 
@@ -43,3 +45,5 @@ export const PIECE_COLOR = {
   T: '#b84dff',
   Z: '#ff3f6a',
 };
+
+export const SCORE_BY_LINES = [0, 100, 300, 500, 800];

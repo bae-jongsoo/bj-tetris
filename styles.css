@@ -41,9 +41,11 @@ body {
 }
 
 .hud div,
-#restartBtn {
+#restartBtn,
+#overlayAction {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   padding: 6px 8px;
   border-radius: 8px;
   background: rgba(15, 24, 48, 0.7);
@@ -51,25 +53,56 @@ body {
 
 #restartBtn {
   grid-column: span 2;
-  justify-content: center;
   border: 1px solid #5f74a6;
   color: #ecf0ff;
   background: linear-gradient(180deg, #243b6f, #12214b);
   cursor: pointer;
 }
 
-#restartBtn:active {
+#restartBtn:active,
+#overlayAction:active {
   transform: translateY(1px);
+}
+
+#overlayAction {
+  border: 1px solid #7fb4ff;
+  color: #ecf0ff;
+  background: linear-gradient(180deg, #284b90, #123066);
+  cursor: pointer;
 }
 
 .board-area {
   width: 100%;
   display: grid;
   place-items: center;
+  position: relative;
 }
 
 #gameCanvas {
   border-radius: 6px;
   border: 2px solid #6370a2;
   background: #0a0f1d;
+}
+
+.overlay {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  z-index: 2;
+  width: calc(100% - 12px);
+  max-width: 100%;
+  padding: 20px;
+  border-radius: 10px;
+  background: rgba(2, 6, 17, 0.8);
+  color: #eef3ff;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay h2,
+.overlay p {
+  margin: 0;
 }
