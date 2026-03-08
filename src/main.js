@@ -7,7 +7,15 @@ import {
   setSoftDrop,
   hardDropPiece,
   togglePause,
+  drainEvents,
 } from './state.js';
+import {
+  initAudio,
+  play,
+  isAudioEnabled,
+} from './services/audio.js';
+import { pulse, canVibrate, isVibrationEnabled } from './services/vibration.js';
+import { SFX_KEYS } from './constants.js';
 
 const canvas = document.getElementById('gameCanvas');
 const statusText = document.getElementById('statusText');
@@ -34,6 +42,7 @@ const ROTATE_DEBOUNCE_MS = 120;
 let gameState = createInitialState();
 let lastTime = 0;
 let layout = resizeCanvas(canvas);
+let pointerLock = false;
 const input = {
   moveDir: 0,
   holdStartedAt: 0,
@@ -49,14 +58,6 @@ const hudState = {
   lines: '',
   score: '',
 };
-
-function markPressed(button, active) {
-  if (!button) {
-    return;
-  }
-
-  button.classList.toggle('pressed', !!active);
-}
 
 function applyHud() {
   const status = gameState.status.toUpperCase();
@@ -80,6 +81,38 @@ function applyHud() {
     scoreText.textContent = score;
     hudState.score = score;
   }
+}
+
+function markPressed(button, active) {
+  if (!button) {
+    return;
+  }
+
+  button.classList.toggle('pressed', !!active);
+}
+
+function stopAllMovementInputs() {
+  input.moveDir = 0;
+  input.leftDown = false;
+  input.rightDown = false;
+  input.holdStartedAt = 0;
+  input.holdLastMoveAt = 0;
+  markPressed(ctrlLeft, false);
+  markPressed(ctrlRight, false);
+}
+
+function setSoftDropInput(enabled) {
+  input.softDrop = !!enabled;
+  setSoftDrop(gameState, !!enabled);
+  markPressed(ctrlSoft, !!enabled);
+}
+
+function ensureAudioReady() {
+  if (pointerLock) {
+    return;
+  }
+  pointerLock = true;
+  initAudio();
 }
 
 function updateOverlay() {
@@ -121,22 +154,90 @@ function hardRestart() {
   input.holdLastMoveAt = 0;
   input.softDrop = false;
   overlay.classList.add('hidden');
+  play(SFX_KEYS.RESTART);
 }
 
-function stopAllMovementInputs() {
-  input.moveDir = 0;
-  input.leftDown = false;
-  input.rightDown = false;
-  input.holdStartedAt = 0;
-  input.holdLastMoveAt = 0;
-  markPressed(ctrlLeft, false);
-  markPressed(ctrlRight, false);
+function onOverlayAction() {
+  if (gameState.status === 'paused') {
+    togglePause(gameState);
+    return;
+  }
+  if (gameState.status === 'gameover') {
+    hardRestart();
+  }
 }
 
-function setSoftDropInput(enabled) {
-  input.softDrop = !!enabled;
-  setSoftDrop(gameState, !!enabled);
-  markPressed(ctrlSoft, !!enabled);
+function handleEvents(events) {
+  events.forEach((evt) => {
+    switch (evt) {
+      case SFX_KEYS.MOVE:
+        if (isAudioEnabled()) {
+          play(SFX_KEYS.MOVE);
+        }
+        break;
+      case SFX_KEYS.ROTATE:
+        play(SFX_KEYS.ROTATE);
+        break;
+      case SFX_KEYS.SOFT_DROP_TICK:
+        play(SFX_KEYS.SOFT_DROP_TICK);
+        break;
+      case SFX_KEYS.HARD_DROP:
+        play(SFX_KEYS.HARD_DROP);
+        if (isVibrationEnabled()) {
+          pulse(20);
+        }
+        break;
+      case SFX_KEYS.LOCK:
+        if (isAudioEnabled()) {
+          play(SFX_KEYS.LOCK);
+        }
+        break;
+      case 'line_clear_1':
+        play(SFX_KEYS.LINE_CLEAR_1);
+        break;
+      case 'line_clear_2':
+        play(SFX_KEYS.LINE_CLEAR_2);
+        if (isVibrationEnabled()) {
+          pulse(12);
+        }
+        break;
+      case 'line_clear_3':
+        play(SFX_KEYS.LINE_CLEAR_3);
+        if (isVibrationEnabled()) {
+          pulse(12);
+        }
+        break;
+      case 'line_clear_4':
+        play(SFX_KEYS.LINE_CLEAR_4);
+        if (isVibrationEnabled()) {
+          pulse(20);
+        }
+        break;
+      case SFX_KEYS.LEVEL_UP:
+        play(SFX_KEYS.LEVEL_UP);
+        break;
+      case SFX_KEYS.GAME_OVER:
+        play(SFX_KEYS.GAME_OVER);
+        if (isVibrationEnabled() && canVibrate()) {
+          pulse(35);
+        }
+        break;
+      case SFX_KEYS.PAUSE:
+        play(SFX_KEYS.PAUSE);
+        break;
+      case SFX_KEYS.RESUME:
+        play(SFX_KEYS.RESUME);
+        break;
+      case SFX_KEYS.RESTART:
+        play(SFX_KEYS.RESTART);
+        break;
+      case SFX_KEYS.START:
+        play(SFX_KEYS.START);
+        break;
+      default:
+        break;
+    }
+  });
 }
 
 function moveHoldDirection(now) {
@@ -167,11 +268,9 @@ function moveHoldDirection(now) {
 
   const elapsed = now - input.holdStartedAt;
   const interval = elapsed >= HOLD_DELAY_MS ? HOLD_REPEAT_MS : HOLD_DELAY_MS - elapsed;
-
   if (now - input.holdLastMoveAt >= interval) {
     const moved = moveActivePiece(gameState, requestedDir < 0 ? 'left' : 'right');
     input.holdLastMoveAt = now;
-
     if (!moved && elapsed < HOLD_DELAY_MS) {
       input.holdStartedAt = now - HOLD_DELAY_MS;
     }
@@ -184,21 +283,23 @@ function gameLoop(time) {
 
   moveHoldDirection(time);
   stepPhysics(gameState, Number.isFinite(delta) ? delta : 0);
-  render(gameState, layout, ctx);
+  const events = drainEvents(gameState);
+  handleEvents(events);
+
+  render(gameState, layout, ctx, time);
   applyHud();
   updateOverlay();
-
   requestAnimationFrame(gameLoop);
 }
 
 function onKeyDown(event) {
   const key = event.code;
-
   if (gameState.status === 'gameover' && key !== 'KeyR') {
     return;
   }
 
   if (key === 'ArrowLeft' || key === 'KeyA') {
+    ensureAudioReady();
     if (!input.leftDown) {
       input.leftDown = true;
       moveActivePiece(gameState, 'left');
@@ -213,6 +314,7 @@ function onKeyDown(event) {
   }
 
   if (key === 'ArrowRight' || key === 'KeyD') {
+    ensureAudioReady();
     if (!input.rightDown) {
       input.rightDown = true;
       moveActivePiece(gameState, 'right');
@@ -227,6 +329,7 @@ function onKeyDown(event) {
   }
 
   if (key === 'ArrowDown' || key === 'KeyS') {
+    ensureAudioReady();
     if (!input.softDrop) {
       setSoftDropInput(true);
     }
@@ -235,6 +338,7 @@ function onKeyDown(event) {
   }
 
   if ((key === 'ArrowUp' || key === 'KeyW' || key === 'KeyE') && !event.repeat) {
+    ensureAudioReady();
     const now = performance.now();
     if (now >= input.rotateCooldownUntil) {
       rotateActivePiece(gameState);
@@ -245,6 +349,7 @@ function onKeyDown(event) {
   }
 
   if (key === 'Space') {
+    ensureAudioReady();
     if (!event.repeat) {
       hardDropPiece(gameState);
     }
@@ -253,6 +358,7 @@ function onKeyDown(event) {
   }
 
   if (key === 'KeyP') {
+    ensureAudioReady();
     if (togglePause(gameState)) {
       markPressed(ctrlPause, gameState.status === 'paused');
       if (gameState.status !== 'playing') {
@@ -264,6 +370,7 @@ function onKeyDown(event) {
   }
 
   if (key === 'KeyR') {
+    ensureAudioReady();
     hardRestart();
     event.preventDefault();
   }
@@ -271,7 +378,6 @@ function onKeyDown(event) {
 
 function onKeyUp(event) {
   const key = event.code;
-
   if (key === 'ArrowLeft' || key === 'KeyA') {
     input.leftDown = false;
     if (input.moveDir === -1) {
@@ -282,7 +388,6 @@ function onKeyUp(event) {
     markPressed(ctrlLeft, false);
     return;
   }
-
   if (key === 'ArrowRight' || key === 'KeyD') {
     input.rightDown = false;
     if (input.moveDir === 1) {
@@ -293,47 +398,33 @@ function onKeyUp(event) {
     markPressed(ctrlRight, false);
     return;
   }
-
   if (key === 'ArrowDown' || key === 'KeyS') {
     setSoftDropInput(false);
   }
 }
 
-function onOverlayAction() {
-  if (gameState.status === 'paused') {
-    togglePause(gameState);
-    markPressed(ctrlPause, false);
-    return;
-  }
-
-  if (gameState.status === 'gameover') {
-    hardRestart();
-  }
-}
-
 function onTouchControlStart(button, handler) {
-  const pointerDownHandler = (event) => {
+  const downHandler = (event) => {
     event.preventDefault();
+    ensureAudioReady();
     markPressed(button, true);
     handler('down');
   };
-
-  const pointerUpHandler = () => {
+  const upHandler = () => {
     markPressed(button, false);
     handler('up');
   };
-
-  button.addEventListener('pointerdown', pointerDownHandler, { passive: false });
-  button.addEventListener('pointerup', pointerUpHandler);
-  button.addEventListener('pointercancel', pointerUpHandler);
-  button.addEventListener('pointerleave', pointerUpHandler);
+  button.addEventListener('pointerdown', downHandler, { passive: false });
+  button.addEventListener('pointerup', upHandler);
+  button.addEventListener('pointercancel', upHandler);
+  button.addEventListener('pointerleave', upHandler);
 }
 
 onTouchControlStart(ctrlLeft, (phase) => {
+  if (gameState.status !== 'playing') {
+    return;
+  }
   if (phase === 'down') {
-    if (gameState.status !== 'playing') {
-      return;
-    }
     if (!input.leftDown) {
       input.leftDown = true;
       moveActivePiece(gameState, 'left');
@@ -354,10 +445,10 @@ onTouchControlStart(ctrlLeft, (phase) => {
 });
 
 onTouchControlStart(ctrlRight, (phase) => {
+  if (gameState.status !== 'playing') {
+    return;
+  }
   if (phase === 'down') {
-    if (gameState.status !== 'playing') {
-      return;
-    }
     if (!input.rightDown) {
       input.rightDown = true;
       moveActivePiece(gameState, 'right');
@@ -400,6 +491,7 @@ ctrlHard.addEventListener('pointerdown', (event) => {
   if (gameState.status !== 'playing') {
     return;
   }
+  ensureAudioReady();
   markPressed(ctrlHard, true);
   hardDropPiece(gameState);
 });
@@ -407,13 +499,13 @@ ctrlHard.addEventListener('pointerdown', (event) => {
 ctrlHard.addEventListener('pointerup', () => {
   markPressed(ctrlHard, false);
 });
-
 ctrlHard.addEventListener('pointercancel', () => {
   markPressed(ctrlHard, false);
 });
 
 ctrlPause.addEventListener('pointerdown', (event) => {
   event.preventDefault();
+  ensureAudioReady();
   markPressed(ctrlPause, true);
 });
 
@@ -425,12 +517,14 @@ ctrlPause.addEventListener('pointerup', () => {
     }
   }
 });
-
 ctrlPause.addEventListener('pointercancel', () => {
   markPressed(ctrlPause, false);
 });
 
-restartBtn.addEventListener('click', hardRestart);
+restartBtn.addEventListener('click', () => {
+  ensureAudioReady();
+  hardRestart();
+});
 overlayAction.addEventListener('click', onOverlayAction);
 window.addEventListener('keydown', onKeyDown);
 window.addEventListener('keyup', onKeyUp);
@@ -438,10 +532,11 @@ window.addEventListener('resize', () => {
   layout = resizeCanvas(canvas);
 });
 
-layout = resizeCanvas(canvas);
 applyHud();
 updateOverlay();
+layout = resizeCanvas(canvas);
 requestAnimationFrame((time) => {
   lastTime = time;
+  play(SFX_KEYS.START);
   gameLoop(time);
 });

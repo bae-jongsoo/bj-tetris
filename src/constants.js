@@ -5,6 +5,9 @@ export const BOARD_HEIGHT = VISIBLE_HEIGHT + HIDDEN_HEIGHT;
 export const BASE_DROP_MS = 800;
 export const SOFT_DROP_FACTOR = 0.2;
 export const MIN_DROP_MS = 100;
+export const VFX_ROTATE_MS = 140;
+export const VFX_LINE_CLEAR_MS = 110;
+export const VFX_IMPACT_MS = 100;
 
 export const PIECE_TYPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
 
@@ -47,3 +50,21 @@ export const PIECE_COLOR = {
 };
 
 export const SCORE_BY_LINES = [0, 100, 300, 500, 800];
+
+export const SFX_KEYS = {
+  MOVE: 'move',
+  ROTATE: 'rotate',
+  SOFT_DROP_TICK: 'soft_drop_tick',
+  HARD_DROP: 'hard_drop',
+  LOCK: 'lock',
+  LINE_CLEAR_1: 'line_clear_1',
+  LINE_CLEAR_2: 'line_clear_2',
+  LINE_CLEAR_3: 'line_clear_3',
+  LINE_CLEAR_4: 'line_clear_4',
+  GAME_OVER: 'game_over',
+  LEVEL_UP: 'level_up',
+  PAUSE: 'pause',
+  RESUME: 'resume',
+  START: 'start',
+  RESTART: 'restart',
+};

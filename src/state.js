@@ -9,6 +9,9 @@ import {
   SOFT_DROP_FACTOR,
   MIN_DROP_MS,
   SCORE_BY_LINES,
+  VFX_ROTATE_MS,
+  VFX_LINE_CLEAR_MS,
+  VFX_IMPACT_MS,
 } from './constants.js';
 
 function cloneShape(shape) {
@@ -63,6 +66,23 @@ function getDropMsForState(state) {
   return Math.max(MIN_DROP_MS, Math.floor(state.softDrop ? state.dropMs * SOFT_DROP_FACTOR : state.dropMs));
 }
 
+function emitEvent(state, event) {
+  state.events.push(event);
+}
+
+function setRotateVfx(state) {
+  state.vfx.rotateUntil = Date.now() + VFX_ROTATE_MS;
+}
+
+function setLineClearVfx(state, rows) {
+  state.vfx.lineFlashUntil = Date.now() + VFX_LINE_CLEAR_MS;
+  state.vfx.lineFlashRows = rows;
+}
+
+function setImpactVfx(state) {
+  state.vfx.impactUntil = Date.now() + VFX_IMPACT_MS;
+}
+
 export function createInitialState() {
   return {
     status: 'playing',
@@ -76,7 +96,20 @@ export function createInitialState() {
     dropAccumulator: 0,
     softDrop: false,
     lastClearLines: 0,
+    events: [],
+    vfx: {
+      rotateUntil: 0,
+      lineFlashUntil: 0,
+      lineFlashRows: [],
+      impactUntil: 0,
+    },
   };
+}
+
+export function drainEvents(state) {
+  const events = state.events.slice();
+  state.events.length = 0;
+  return events;
 }
 
 export function canPlacePiece(state, piece) {
@@ -132,11 +165,13 @@ function lockActivePiece(state) {
     });
   });
 
+  emitEvent(state, 'lock');
   return overflow;
 }
 
 function clearFullLines(state) {
   let cleared = 0;
+  const clearedRows = [];
   for (let y = state.board.length - 1; y >= 0; y -= 1) {
     const isLineFull = state.board[y].every((cell) => cell !== 0);
     if (!isLineFull) {
@@ -146,15 +181,24 @@ function clearFullLines(state) {
     state.board.splice(y, 1);
     state.board.unshift(Array(BOARD_WIDTH).fill(0));
     cleared += 1;
+    if (y >= HIDDEN_HEIGHT) {
+      clearedRows.push(y - HIDDEN_HEIGHT);
+    }
   }
 
   if (cleared > 0) {
     state.score += SCORE_BY_LINES[Math.min(cleared, 4)] * state.level;
     state.lines += cleared;
+
+    const eventName = `line_clear_${Math.min(cleared, 4)}`;
+    emitEvent(state, eventName);
+    setLineClearVfx(state, clearedRows);
+
     const nextLevel = Math.floor(state.lines / 10) + 1;
     if (nextLevel !== state.level) {
       state.level = nextLevel;
       state.dropMs = computeDropMs(state.level);
+      emitEvent(state, 'level_up');
     }
   }
 
@@ -167,6 +211,7 @@ export function spawnNextPiece(state) {
   state.next = createPiece();
   if (!canPlacePiece(state, state.active)) {
     state.status = 'gameover';
+    emitEvent(state, 'game_over');
   }
 }
 
@@ -176,6 +221,7 @@ function settleActive(state) {
 
   if (overflow) {
     state.status = 'gameover';
+    emitEvent(state, 'game_over');
     return;
   }
 
@@ -190,6 +236,7 @@ export function stepDrop(state) {
   const next = { ...state.active, y: state.active.y + 1 };
   if (canPlacePiece(state, next)) {
     state.active = next;
+    emitEvent(state, 'move');
     return;
   }
 
@@ -208,6 +255,7 @@ export function moveActivePiece(state, direction) {
   }
 
   state.active = next;
+  emitEvent(state, 'move');
   return true;
 }
 
@@ -239,6 +287,8 @@ export function rotateActivePiece(state) {
 
     if (canPlacePiece(state, candidate)) {
       state.active = candidate;
+      emitEvent(state, 'rotate');
+      setRotateVfx(state);
       return true;
     }
   }
@@ -267,10 +317,13 @@ export function hardDropPiece(state) {
     }
     state.active = next;
     distance += 1;
+    emitEvent(state, 'move');
   }
 
   if (distance > 0) {
     state.score += distance * 2;
+    emitEvent(state, 'hard_drop');
+    setImpactVfx(state);
   }
 
   settleActive(state);
@@ -282,12 +335,14 @@ export function togglePause(state) {
     state.status = 'paused';
     state.softDrop = false;
     state.dropAccumulator = 0;
+    emitEvent(state, 'pause');
     return true;
   }
 
   if (state.status === 'paused') {
     state.status = 'playing';
     state.dropAccumulator = 0;
+    emitEvent(state, 'resume');
     return true;
   }
 
@@ -307,5 +362,9 @@ export function stepPhysics(state, deltaMs) {
     if (state.status === 'gameover') {
       break;
     }
+  }
+
+  if (state.softDrop && state.status === 'playing') {
+    emitEvent(state, 'soft_drop_tick');
   }
 }
