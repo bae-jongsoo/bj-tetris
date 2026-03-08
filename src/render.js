@@ -2,7 +2,6 @@ import {
   BOARD_WIDTH,
   VISIBLE_HEIGHT,
   HIDDEN_HEIGHT,
-  VFX_ROTATE_MS,
   VFX_LINE_CLEAR_MS,
   VFX_IMPACT_MS,
 } from './constants.js';
@@ -67,11 +66,8 @@ function drawCell(ctx, x, y, size, color, glow = false) {
   if (glow) {
     ctx.save();
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    ctx.fillRect(x * size + size * 0.12, y * size + size * 0.12, size * 0.76, size * 0.76);
+    ctx.fillRect(x * size + size * 0.18, y * size + size * 0.18, size * 0.64, size * 0.64);
     ctx.restore();
-  } else {
-    ctx.fillStyle = 'rgba(255,255,255,0.14)';
-    ctx.fillRect(x * size + size * 0.15, y * size + size * 0.15, size * 0.65, size * 0.65);
   }
 }
 
@@ -82,10 +78,10 @@ function drawLineClearFlash(ctx, state, layout, now) {
     return;
   }
 
-  const alpha = Math.min(0.5, Math.max(0.05, remaining / VFX_LINE_CLEAR_MS));
+  const alpha = Math.min(0.12, Math.max(0.03, remaining / VFX_LINE_CLEAR_MS));
   const { cell } = layout;
   ctx.save();
-  ctx.fillStyle = `rgba(255, 120, 120, ${alpha})`;
+  ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
   lineFlashRows.forEach((row) => {
     if (row >= 0 && row < VISIBLE_HEIGHT) {
       ctx.fillRect(0, row * cell, BOARD_WIDTH * cell, cell);
@@ -100,40 +96,20 @@ function drawImpactPulse(ctx, state, layout, now) {
     return;
   }
 
-  const { cell } = layout;
-  const alpha = Math.min(0.4, Math.max(0.05, remaining / VFX_IMPACT_MS));
-  ctx.save();
-  ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-  ctx.fillRect(0, 0, BOARD_WIDTH * cell, VISIBLE_HEIGHT * cell);
-  ctx.restore();
-}
-
-function drawRotatePulse(ctx, state, layout, now) {
-  if (!state.active || state.vfx.rotateUntil <= now) {
+  const rows = state.vfx.impactRows || [];
+  if (rows.length !== 2) {
     return;
   }
 
-  const alpha = Math.min(0.5, Math.max(0.06, (state.vfx.rotateUntil - now) / VFX_ROTATE_MS));
   const { cell } = layout;
-  const bounds = {
-    x: 0,
-    y: 0,
-    width: state.active.shape[0].length * cell,
-    height: state.active.shape.length * cell,
-  };
-
-  const px = state.active.x * cell;
-  const py = (state.active.y - HIDDEN_HEIGHT) * cell;
-
-  bounds.x = px - 2;
-  bounds.y = py - 2;
-  bounds.width += 4;
-  bounds.height += 4;
-
+  const [startRow, endRow] = rows;
+  if (startRow > endRow) {
+    return;
+  }
+  const alpha = Math.min(0.06, Math.max(0.015, remaining / VFX_IMPACT_MS));
   ctx.save();
-  ctx.strokeStyle = `rgba(130, 210, 255, ${alpha})`;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
+  ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+  ctx.fillRect(0, startRow * cell, BOARD_WIDTH * cell, (endRow - startRow + 1) * cell);
   ctx.restore();
 }
 
@@ -143,7 +119,7 @@ export function render(state, layout, ctx, now = Date.now()) {
   const boardH = VISIBLE_HEIGHT * cell;
 
   ctx.clearRect(0, 0, boardW, boardH);
-  ctx.fillStyle = '#091124';
+  ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, boardW, boardH);
 
   for (let y = HIDDEN_HEIGHT; y < state.board.length; y += 1) {
@@ -173,8 +149,6 @@ export function render(state, layout, ctx, now = Date.now()) {
     });
   }
 
-  drawRotatePulse(ctx, state, layout, now);
-  drawLineClearFlash(ctx, state, layout, now);
-  drawImpactPulse(ctx, state, layout, now);
+  // vfx removed to avoid residual color artifacts on empty cells
   drawGrid(ctx, layout);
 }

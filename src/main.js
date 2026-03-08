@@ -116,9 +116,20 @@ function ensureAudioReady() {
 }
 
 function updateOverlay() {
+  if (gameState.status === 'idle') {
+    overlay.classList.remove('hidden');
+    overlayStatus.textContent = 'READY';
+    overlaySub.textContent = '시작 버튼을 눌러 게임을 시작하세요.';
+    overlayAction.textContent = '시작';
+    overlayAction.style.display = 'inline-block';
+    restartBtn.textContent = '시작';
+    return;
+  }
+
   if (gameState.status === 'playing') {
     overlay.classList.add('hidden');
     overlayAction.textContent = '';
+    restartBtn.textContent = 'Restart';
     return;
   }
 
@@ -129,6 +140,7 @@ function updateOverlay() {
     overlaySub.textContent = '게임이 정지되었습니다.';
     overlayAction.textContent = '재개';
     overlayAction.style.display = 'inline-block';
+    restartBtn.textContent = 'Restart';
     return;
   }
 
@@ -137,6 +149,7 @@ function updateOverlay() {
     overlaySub.textContent = `레벨 ${gameState.level}  ·  라인 ${gameState.lines}  ·  점수 ${gameState.score}`;
     overlayAction.textContent = '재시작';
     overlayAction.style.display = 'inline-block';
+    restartBtn.textContent = 'Restart';
     return;
   }
 
@@ -147,6 +160,8 @@ function updateOverlay() {
 
 function hardRestart() {
   gameState = createInitialState();
+  ensureAudioReady();
+  gameState.status = 'playing';
   input.leftDown = false;
   input.rightDown = false;
   input.moveDir = 0;
@@ -157,7 +172,21 @@ function hardRestart() {
   play(SFX_KEYS.RESTART);
 }
 
+function startGame() {
+  if (gameState.status !== 'idle') {
+    return;
+  }
+
+  gameState.status = 'playing';
+  ensureAudioReady();
+  play(SFX_KEYS.START);
+}
+
 function onOverlayAction() {
+  if (gameState.status === 'idle') {
+    startGame();
+    return;
+  }
   if (gameState.status === 'paused') {
     togglePause(gameState);
     return;
@@ -170,10 +199,22 @@ function onOverlayAction() {
 function handleEvents(events) {
   events.forEach((evt) => {
     switch (evt) {
-      case SFX_KEYS.MOVE:
-        if (isAudioEnabled()) {
-          play(SFX_KEYS.MOVE);
-        }
+      case 'piece_spawned':
+        input.moveDir = 0;
+        input.holdStartedAt = 0;
+        input.holdLastMoveAt = 0;
+        input.rotateCooldownUntil = 0;
+        input.leftDown = false;
+        input.rightDown = false;
+        setSoftDropInput(false);
+        markPressed(ctrlSoft, false);
+        markPressed(ctrlLeft, false);
+        markPressed(ctrlRight, false);
+        return;
+    case SFX_KEYS.MOVE:
+      if (isAudioEnabled()) {
+        play(SFX_KEYS.MOVE);
+      }
         break;
       case SFX_KEYS.ROTATE:
         play(SFX_KEYS.ROTATE);
@@ -294,6 +335,10 @@ function gameLoop(time) {
 
 function onKeyDown(event) {
   const key = event.code;
+  if (gameState.status === 'idle') {
+    return;
+  }
+
   if (gameState.status === 'gameover' && key !== 'KeyR') {
     return;
   }
@@ -469,6 +514,9 @@ onTouchControlStart(ctrlRight, (phase) => {
 });
 
 onTouchControlStart(ctrlRotate, (phase) => {
+  if (gameState.status !== 'playing') {
+    return;
+  }
   if (phase === 'down') {
     const now = performance.now();
     if (now >= input.rotateCooldownUntil) {
@@ -479,6 +527,9 @@ onTouchControlStart(ctrlRotate, (phase) => {
 });
 
 onTouchControlStart(ctrlSoft, (phase) => {
+  if (gameState.status !== 'playing') {
+    return;
+  }
   if (phase === 'down') {
     setSoftDropInput(true);
   } else {
@@ -523,6 +574,10 @@ ctrlPause.addEventListener('pointercancel', () => {
 
 restartBtn.addEventListener('click', () => {
   ensureAudioReady();
+  if (gameState.status === 'idle') {
+    startGame();
+    return;
+  }
   hardRestart();
 });
 overlayAction.addEventListener('click', onOverlayAction);
@@ -537,6 +592,5 @@ updateOverlay();
 layout = resizeCanvas(canvas);
 requestAnimationFrame((time) => {
   lastTime = time;
-  play(SFX_KEYS.START);
   gameLoop(time);
 });

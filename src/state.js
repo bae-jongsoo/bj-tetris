@@ -80,12 +80,48 @@ function setLineClearVfx(state, rows) {
 }
 
 function setImpactVfx(state) {
+  if (!state.active) {
+    state.vfx.impactRows = [];
+    state.vfx.impactUntil = 0;
+    return;
+  }
+
+  let minRow = VISIBLE_HEIGHT - 1;
+  let maxRow = 0;
+  let found = false;
+
+  state.active.shape.forEach((row, py) => {
+    row.forEach((cell, px) => {
+      if (!cell) {
+        return;
+      }
+      const boardRow = state.active.y + py - HIDDEN_HEIGHT;
+      if (boardRow < 0 || boardRow >= VISIBLE_HEIGHT) {
+        return;
+      }
+      if (boardRow < minRow) {
+        minRow = boardRow;
+      }
+      if (boardRow > maxRow) {
+        maxRow = boardRow;
+      }
+      found = true;
+    });
+  });
+
+  if (!found) {
+    state.vfx.impactRows = [];
+    state.vfx.impactUntil = 0;
+    return;
+  }
+
+  state.vfx.impactRows = [minRow, maxRow];
   state.vfx.impactUntil = Date.now() + VFX_IMPACT_MS;
 }
 
 export function createInitialState() {
   return {
-    status: 'playing',
+    status: 'idle',
     board: makeBoard(),
     active: createPiece(),
     next: createPiece(),
@@ -102,6 +138,7 @@ export function createInitialState() {
       lineFlashUntil: 0,
       lineFlashRows: [],
       impactUntil: 0,
+      impactRows: [],
     },
   };
 }
@@ -209,6 +246,7 @@ function clearFullLines(state) {
 export function spawnNextPiece(state) {
   state.active = state.next;
   state.next = createPiece();
+  emitEvent(state, 'piece_spawned');
   if (!canPlacePiece(state, state.active)) {
     state.status = 'gameover';
     emitEvent(state, 'game_over');
