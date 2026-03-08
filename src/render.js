@@ -5,6 +5,7 @@ import {
   VFX_LINE_CLEAR_MS,
   VFX_IMPACT_MS,
 } from './constants.js';
+import { getGhostPiece } from './state.js';
 
 function getBoardBounds() {
   const shell = document.querySelector('.board-area');
@@ -38,6 +39,31 @@ export function resizeCanvas(canvas) {
   return { cell, cssW, cssH };
 }
 
+export function resizeNextCanvas(nextCanvas) {
+  if (!nextCanvas) {
+    return null;
+  }
+
+  const rect = nextCanvas.getBoundingClientRect();
+  const cssW = Math.max(72, Math.round(rect.width || 110));
+  const cssH = Math.max(72, Math.round(rect.height || cssW));
+  const scale = window.devicePixelRatio || 1;
+
+  nextCanvas.style.width = `${cssW}px`;
+  nextCanvas.style.height = `${cssH}px`;
+  nextCanvas.width = Math.floor(cssW * scale);
+  nextCanvas.height = Math.floor(cssH * scale);
+
+  const nextCtx = nextCanvas.getContext('2d');
+  nextCtx.setTransform(scale, 0, 0, scale, 0, 0);
+
+  return {
+    cell: Math.floor(Math.min(cssW, cssH) / 6),
+    cssW,
+    cssH,
+  };
+}
+
 function drawGrid(ctx, layout) {
   const { cell } = layout;
   ctx.strokeStyle = '#28345d';
@@ -60,15 +86,16 @@ function drawGrid(ctx, layout) {
   }
 }
 
-function drawCell(ctx, x, y, size, color, glow = false) {
+function drawCell(ctx, x, y, size, color, glow = false, alpha = 1) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
   ctx.fillStyle = color;
   ctx.fillRect(x * size, y * size, size, size);
   if (glow) {
-    ctx.save();
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
     ctx.fillRect(x * size + size * 0.18, y * size + size * 0.18, size * 0.64, size * 0.64);
-    ctx.restore();
   }
+  ctx.restore();
 }
 
 function drawLineClearFlash(ctx, state, layout, now) {
@@ -113,6 +140,75 @@ function drawImpactPulse(ctx, state, layout, now) {
   ctx.restore();
 }
 
+function drawGhostPiece(state, ctx, layout) {
+  const ghost = getGhostPiece(state);
+  if (!ghost) {
+    return;
+  }
+
+  const { cell } = layout;
+  ghost.shape.forEach((row, py) => {
+    row.forEach((cellOccupied, px) => {
+      if (!cellOccupied) {
+        return;
+      }
+      const y = ghost.y + py - HIDDEN_HEIGHT;
+      const x = ghost.x + px;
+      if (y < 0 || y >= VISIBLE_HEIGHT) {
+        return;
+      }
+      drawCell(ctx, x, y, cell, ghost.color, true, 0.32);
+    });
+  });
+}
+
+function drawNextPiece(state, ctx, layout) {
+  const piece = state.next;
+  if (!piece || !ctx || !layout) {
+    return;
+  }
+
+  const { cell, cssW, cssH } = layout;
+  ctx.clearRect(0, 0, cssW, cssH);
+  ctx.fillStyle = '#070f20';
+  ctx.fillRect(0, 0, cssW, cssH);
+
+  if (!piece) {
+    return;
+  }
+
+  const shapeWidth = piece.shape[0].length;
+  const shapeHeight = piece.shape.length;
+  const pieceOffsetX = Math.floor((cssW - shapeWidth * cell) / 2);
+  const pieceOffsetY = Math.floor((cssH - shapeHeight * cell) / 2);
+
+  ctx.save();
+  ctx.translate(pieceOffsetX, pieceOffsetY);
+
+  piece.shape.forEach((row, py) => {
+    row.forEach((cellOccupied, px) => {
+      if (!cellOccupied) {
+        return;
+      }
+      drawCell(ctx, px, py, cell, piece.color, false, 1);
+    });
+  });
+  ctx.restore();
+}
+
+export function renderNext(state, nextLayout, nextCanvas) {
+  if (!nextCanvas || !nextLayout) {
+    return;
+  }
+
+  const nextCtx = nextCanvas.getContext('2d');
+  if (!nextCtx) {
+    return;
+  }
+
+  drawNextPiece(state, nextCtx, nextLayout);
+}
+
 export function render(state, layout, ctx, now = Date.now()) {
   const { cell } = layout;
   const boardW = BOARD_WIDTH * cell;
@@ -133,6 +229,8 @@ export function render(state, layout, ctx, now = Date.now()) {
   }
 
   if (state.active) {
+    drawGhostPiece(state, ctx, layout);
+
     state.active.shape.forEach((row, py) => {
       row.forEach((cellOccupied, px) => {
         if (!cellOccupied) {

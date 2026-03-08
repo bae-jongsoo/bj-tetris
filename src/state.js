@@ -176,6 +176,23 @@ export function canPlacePiece(state, piece) {
   return true;
 }
 
+export function getGhostPiece(state) {
+  if (!state.active) {
+    return null;
+  }
+
+  const ghost = { ...state.active };
+  while (true) {
+    const next = { ...ghost, y: ghost.y + 1 };
+    if (!canPlacePiece(state, next)) {
+      break;
+    }
+    ghost.y += 1;
+  }
+
+  return ghost;
+}
+
 function lockActivePiece(state) {
   const piece = state.active;
   if (!piece) {

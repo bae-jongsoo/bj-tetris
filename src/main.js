@@ -1,4 +1,9 @@
-import { resizeCanvas, render } from './render.js';
+import {
+  resizeCanvas,
+  resizeNextCanvas,
+  render,
+  renderNext,
+} from './render.js';
 import {
   createInitialState,
   stepPhysics,
@@ -20,6 +25,7 @@ import { pulse, canVibrate, isVibrationEnabled } from './services/vibration.js';
 import { SFX_KEYS } from './constants.js';
 
 const canvas = document.getElementById('gameCanvas');
+const nextCanvas = document.getElementById('nextCanvas');
 const statusText = document.getElementById('statusText');
 const levelText = document.getElementById('levelText');
 const linesText = document.getElementById('linesText');
@@ -36,6 +42,7 @@ const ctrlSoft = document.getElementById('ctrlSoft');
 const ctrlHard = document.getElementById('ctrlHard');
 const ctrlPause = document.getElementById('ctrlPause');
 const ctx = canvas.getContext('2d');
+const playLayout = document.querySelector('.play-layout');
 
 const HOLD_DELAY_MS = 170;
 const HOLD_REPEAT_MS = 70;
@@ -44,6 +51,7 @@ const ROTATE_DEBOUNCE_MS = 120;
 let gameState = createInitialState();
 let lastTime = 0;
 let layout = resizeCanvas(canvas);
+let nextLayout = resizeNextCanvas(nextCanvas);
 let pointerLock = false;
 const input = {
   moveDir: 0,
@@ -60,6 +68,13 @@ const hudState = {
   lines: '',
   score: '',
 };
+
+function syncNextPanelOffset(layoutForOffset) {
+  if (!playLayout || !layoutForOffset) {
+    return;
+  }
+  playLayout.style.setProperty('--board-width', `${layoutForOffset.cssW}px`);
+}
 
 function applyHud() {
   const status = gameState.status.toUpperCase();
@@ -352,6 +367,7 @@ function gameLoop(time) {
   handleEvents(events);
 
   render(gameState, layout, ctx, time);
+  renderNext(gameState, nextLayout, nextCanvas);
   applyHud();
   updateOverlay();
   requestAnimationFrame(gameLoop);
@@ -626,11 +642,15 @@ window.addEventListener('keydown', onKeyDown);
 window.addEventListener('keyup', onKeyUp);
 window.addEventListener('resize', () => {
   layout = resizeCanvas(canvas);
+  nextLayout = resizeNextCanvas(nextCanvas);
+  syncNextPanelOffset(layout);
 });
 
 applyHud();
 updateOverlay();
 layout = resizeCanvas(canvas);
+nextLayout = resizeNextCanvas(nextCanvas);
+syncNextPanelOffset(layout);
 requestAnimationFrame((time) => {
   lastTime = time;
   gameLoop(time);

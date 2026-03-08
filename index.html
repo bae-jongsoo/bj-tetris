@@ -15,13 +15,19 @@
         <div>SCORE: <strong id="scoreText">0</strong></div>
         <button id="restartBtn" type="button">Restart</button>
       </section>
-      <section class="board-area">
-        <div id="overlay" class="overlay hidden" aria-live="polite">
-          <h2 id="overlayStatus"></h2>
-          <p id="overlaySub"></p>
-          <button id="overlayAction" type="button"></button>
-        </div>
-        <canvas id="gameCanvas" aria-label="Tetris board"></canvas>
+      <section class="play-layout">
+        <section class="board-area">
+          <div id="overlay" class="overlay hidden" aria-live="polite">
+            <h2 id="overlayStatus"></h2>
+            <p id="overlaySub"></p>
+            <button id="overlayAction" type="button"></button>
+          </div>
+          <canvas id="gameCanvas" aria-label="Tetris board"></canvas>
+        </section>
+        <section class="next-panel">
+          <h2>NEXT</h2>
+          <canvas id="nextCanvas" aria-label="Next block preview"></canvas>
+        </section>
       </section>
       <section class="control-bar" aria-label="Touch controls">
         <button id="ctrlLeft" type="button" class="control-btn" data-action="moveLeft">◀</button>
