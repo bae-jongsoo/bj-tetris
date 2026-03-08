@@ -221,6 +221,7 @@ function clearFullLines(state) {
     if (y >= HIDDEN_HEIGHT) {
       clearedRows.push(y - HIDDEN_HEIGHT);
     }
+    y += 1;
   }
 
   if (cleared > 0) {

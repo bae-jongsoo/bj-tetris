@@ -180,6 +180,9 @@ function startGame() {
   gameState.status = 'playing';
   ensureAudioReady();
   play(SFX_KEYS.START);
+  overlay.classList.add('hidden');
+  overlayAction.textContent = '';
+  overlayAction.style.display = 'none';
 }
 
 function onOverlayAction() {
@@ -572,15 +575,22 @@ ctrlPause.addEventListener('pointercancel', () => {
   markPressed(ctrlPause, false);
 });
 
-restartBtn.addEventListener('click', () => {
+function onStartClick() {
   ensureAudioReady();
   if (gameState.status === 'idle') {
     startGame();
     return;
   }
   hardRestart();
-});
+}
+
 overlayAction.addEventListener('click', onOverlayAction);
+overlayAction.addEventListener('pointerdown', (event) => {
+  event.preventDefault();
+  onOverlayAction();
+});
+restartBtn.addEventListener('click', onStartClick);
+restartBtn.addEventListener('pointerdown', onStartClick);
 window.addEventListener('keydown', onKeyDown);
 window.addEventListener('keyup', onKeyUp);
 window.addEventListener('resize', () => {
