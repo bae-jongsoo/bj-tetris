@@ -1,0 +1,14 @@
+[
+    {
+        "merged": "com.example.bjtetris.app-release-23:/drawable_splash_background.xml.flat",
+        "source": "com.example.bjtetris.app-main-24:/drawable/splash_background.xml"
+    },
+    {
+        "merged": "com.example.bjtetris.app-release-23:/drawable_ic_bjtetris.xml.flat",
+        "source": "com.example.bjtetris.app-main-24:/drawable/ic_bjtetris.xml"
+    },
+    {
+        "merged": "com.example.bjtetris.app-release-23:/drawable-nodpi_splash_logo.xml.flat",
+        "source": "com.example.bjtetris.app-main-24:/drawable-nodpi/splash_logo.xml"
+    }
+]

@@ -1,0 +1,12 @@
+R_DEF: Internal format may change without notice
+local
+color brandBlack
+color brandDark
+color brandPurple
+color brandWhite
+drawable ic_bjtetris
+drawable splash_background
+drawable splash_logo
+string app_name
+style Theme.BJTetris
+style Theme.BJTetris.Splash

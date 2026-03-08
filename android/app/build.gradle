@@ -1,0 +1,69 @@
+plugins {
+    id 'com.android.application'
+}
+
+configurations.configureEach {
+    resolutionStrategy {
+        force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
+    }
+}
+
+android {
+    namespace 'com.example.bjtetris'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.example.bjtetris'
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/AL2.0', 'META-INF/LGPL2.1', 'META-INF/INDEX.LIST', 'META-INF/*.kotlin_module']
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+tasks.register('syncWebAssets') {
+    doLast {
+        def srcRoot = file("$projectDir/../..")
+        def dstRoot = file("$projectDir/src/main/assets")
+
+        delete(dstRoot)
+
+        copy {
+            from(srcRoot) {
+                include 'index.html'
+                include 'styles.css'
+                include 'src/**'
+                include 'assets/**'
+            }
+            into(dstRoot)
+        }
+    }
+}
+
+tasks.named('preBuild').configure {
+    dependsOn(tasks.syncWebAssets)
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+}
