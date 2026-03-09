@@ -26,6 +26,7 @@ import { pulse, canVibrate, isVibrationEnabled } from './services/vibration.js';
 import { SFX_KEYS } from './constants.js';
 
 const canvas = document.getElementById('gameCanvas');
+const boardArea = document.querySelector('.board-area');
 const nextCanvas = document.getElementById('nextCanvas');
 const statusText = document.getElementById('statusText');
 const levelText = document.getElementById('levelText');
@@ -53,6 +54,7 @@ const shell = document.querySelector('.shell');
 const HOLD_DELAY_MS = 170;
 const HOLD_REPEAT_MS = 70;
 const ROTATE_DEBOUNCE_MS = 120;
+const BOARD_TOUCH_THRESHOLD = 14;
 
 const NUMBER_BLOCKS_STORAGE_KEY = 'tetris.numberBlocksEnabled';
 let gameState = createInitialState({
@@ -78,6 +80,7 @@ const hudState = {
   score: '',
 };
 let numberBlocksEnabled = gameState.numberBlocksEnabled;
+const boardMovePointers = new Map();
 
 function readNumberBlockSetting() {
   try {
@@ -192,6 +195,64 @@ function stopAllMovementInputs() {
   input.holdLastMoveAt = 0;
   markPressed(ctrlLeft, false);
   markPressed(ctrlRight, false);
+}
+
+function startMoveLeft() {
+  if (input.leftDown) {
+    return;
+  }
+
+  input.leftDown = true;
+  moveActivePiece(gameState, 'left');
+  input.holdStartedAt = performance.now();
+  input.holdLastMoveAt = input.holdStartedAt;
+  input.moveDir = -1;
+  markPressed(ctrlLeft, true);
+  markPressed(ctrlRight, false);
+}
+
+function startMoveRight() {
+  if (input.rightDown) {
+    return;
+  }
+
+  input.rightDown = true;
+  moveActivePiece(gameState, 'right');
+  input.holdStartedAt = performance.now();
+  input.holdLastMoveAt = input.holdStartedAt;
+  input.moveDir = 1;
+  markPressed(ctrlRight, true);
+  markPressed(ctrlLeft, false);
+}
+
+function stopMoveLeft() {
+  input.leftDown = false;
+  if (input.moveDir === -1) {
+    input.moveDir = 0;
+    input.holdStartedAt = 0;
+    input.holdLastMoveAt = 0;
+  }
+  markPressed(ctrlLeft, false);
+}
+
+function stopMoveRight() {
+  input.rightDown = false;
+  if (input.moveDir === 1) {
+    input.moveDir = 0;
+    input.holdStartedAt = 0;
+    input.holdLastMoveAt = 0;
+  }
+  markPressed(ctrlRight, false);
+}
+
+function rotateActivePieceIfAllowed() {
+  const now = performance.now();
+  if (now < input.rotateCooldownUntil) {
+    return;
+  }
+
+  rotateActivePiece(gameState);
+  input.rotateCooldownUntil = now + ROTATE_DEBOUNCE_MS;
 }
 
 function setSoftDropInput(enabled) {
@@ -470,30 +531,14 @@ function onKeyDown(event) {
 
   if (key === 'ArrowLeft' || key === 'KeyA') {
     ensureAudioReady();
-    if (!input.leftDown) {
-      input.leftDown = true;
-      moveActivePiece(gameState, 'left');
-      input.holdStartedAt = performance.now();
-      input.holdLastMoveAt = input.holdStartedAt;
-      input.moveDir = -1;
-      markPressed(ctrlLeft, true);
-      markPressed(ctrlRight, false);
-    }
+    startMoveLeft();
     event.preventDefault();
     return;
   }
 
   if (key === 'ArrowRight' || key === 'KeyD') {
     ensureAudioReady();
-    if (!input.rightDown) {
-      input.rightDown = true;
-      moveActivePiece(gameState, 'right');
-      input.holdStartedAt = performance.now();
-      input.holdLastMoveAt = input.holdStartedAt;
-      input.moveDir = 1;
-      markPressed(ctrlRight, true);
-      markPressed(ctrlLeft, false);
-    }
+    startMoveRight();
     event.preventDefault();
     return;
   }
@@ -554,23 +599,11 @@ function onKeyDown(event) {
 function onKeyUp(event) {
   const key = event.code;
   if (key === 'ArrowLeft' || key === 'KeyA') {
-    input.leftDown = false;
-    if (input.moveDir === -1) {
-      input.moveDir = 0;
-      input.holdStartedAt = 0;
-      input.holdLastMoveAt = 0;
-    }
-    markPressed(ctrlLeft, false);
+    stopMoveLeft();
     return;
   }
   if (key === 'ArrowRight' || key === 'KeyD') {
-    input.rightDown = false;
-    if (input.moveDir === 1) {
-      input.moveDir = 0;
-      input.holdStartedAt = 0;
-      input.holdLastMoveAt = 0;
-    }
-    markPressed(ctrlRight, false);
+    stopMoveRight();
     return;
   }
   if (key === 'ArrowDown' || key === 'KeyS') {
@@ -600,22 +633,9 @@ onTouchControlStart(ctrlLeft, (phase) => {
     return;
   }
   if (phase === 'down') {
-    if (!input.leftDown) {
-      input.leftDown = true;
-      moveActivePiece(gameState, 'left');
-      input.holdStartedAt = performance.now();
-      input.holdLastMoveAt = input.holdStartedAt;
-      input.moveDir = -1;
-      markPressed(ctrlRight, false);
-    }
+    startMoveLeft();
   } else {
-    input.leftDown = false;
-    if (input.moveDir === -1) {
-      input.moveDir = 0;
-      input.holdStartedAt = 0;
-      input.holdLastMoveAt = 0;
-    }
-    markPressed(ctrlLeft, false);
+    stopMoveLeft();
   }
 });
 
@@ -624,35 +644,100 @@ onTouchControlStart(ctrlRight, (phase) => {
     return;
   }
   if (phase === 'down') {
-    if (!input.rightDown) {
-      input.rightDown = true;
-      moveActivePiece(gameState, 'right');
-      input.holdStartedAt = performance.now();
-      input.holdLastMoveAt = input.holdStartedAt;
-      input.moveDir = 1;
-      markPressed(ctrlLeft, false);
-    }
+    startMoveRight();
   } else {
-    input.rightDown = false;
-    if (input.moveDir === 1) {
-      input.moveDir = 0;
-      input.holdStartedAt = 0;
-      input.holdLastMoveAt = 0;
-    }
-    markPressed(ctrlRight, false);
+    stopMoveRight();
   }
 });
+
+function handleBoardTouchStart(event) {
+  if (!boardArea || gameState.status !== 'playing') {
+    return;
+  }
+  const pointerId = event.pointerId;
+  if (!Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) {
+    return;
+  }
+
+  event.preventDefault();
+  ensureAudioReady();
+  boardMovePointers.set(pointerId, {
+    startX: event.clientX,
+    startY: event.clientY,
+    active: 'pending',
+  });
+
+  try {
+    boardArea.setPointerCapture(pointerId);
+  } catch {}
+}
+
+function handleBoardTouchMove(event) {
+  if (!boardArea || gameState.status !== 'playing') {
+    return;
+  }
+
+  const pointerId = event.pointerId;
+  if (!boardMovePointers.has(pointerId)) {
+    return;
+  }
+
+  const pointerState = boardMovePointers.get(pointerId);
+  const dx = event.clientX - pointerState.startX;
+  const dy = event.clientY - pointerState.startY;
+
+  if (pointerState.active !== 'pending') {
+    return;
+  }
+
+  if (
+    Math.abs(dx) < BOARD_TOUCH_THRESHOLD &&
+    Math.abs(dy) < BOARD_TOUCH_THRESHOLD
+  ) {
+    return;
+  }
+
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    pointerState.active = dx < 0 ? 'left' : 'right';
+    if (pointerState.active === 'left') {
+      startMoveLeft();
+    } else {
+      startMoveRight();
+    }
+    return;
+  }
+
+  if (dy > 0) {
+    pointerState.active = 'down';
+    setSoftDropInput(true);
+  }
+}
+
+function handleBoardTouchEnd(event) {
+  const pointerId = event.pointerId;
+  if (!boardMovePointers.has(pointerId)) {
+    return;
+  }
+
+  const pointerState = boardMovePointers.get(pointerId);
+  boardMovePointers.delete(pointerId);
+  if (pointerState.active === 'pending') {
+    rotateActivePieceIfAllowed();
+  } else if (pointerState.active === 'left') {
+    stopMoveLeft();
+  } else if (pointerState.active === 'right') {
+    stopMoveRight();
+  } else {
+    setSoftDropInput(false);
+  }
+}
 
 onTouchControlStart(ctrlRotate, (phase) => {
   if (gameState.status !== 'playing') {
     return;
   }
   if (phase === 'down') {
-    const now = performance.now();
-    if (now >= input.rotateCooldownUntil) {
-      rotateActivePiece(gameState);
-      input.rotateCooldownUntil = now + ROTATE_DEBOUNCE_MS;
-    }
+    rotateActivePieceIfAllowed();
   }
 });
 
@@ -733,8 +818,17 @@ if (toggleNumberBlocksBtn) {
     toggleNumberBlocks();
   });
 }
+if (boardArea) {
+  boardArea.addEventListener('pointerdown', handleBoardTouchStart, { passive: false });
+  boardArea.addEventListener('pointermove', handleBoardTouchMove, { passive: false });
+  boardArea.addEventListener('pointerup', handleBoardTouchEnd);
+  boardArea.addEventListener('pointercancel', handleBoardTouchEnd);
+  boardArea.addEventListener('pointerleave', handleBoardTouchEnd);
+}
 window.addEventListener('keydown', onKeyDown);
 window.addEventListener('keyup', onKeyUp);
+window.addEventListener('pointerup', handleBoardTouchEnd);
+window.addEventListener('pointercancel', handleBoardTouchEnd);
 window.addEventListener('resize', () => {
   layout = resizeCanvas(canvas);
   nextLayout = resizeNextCanvas(nextCanvas);
