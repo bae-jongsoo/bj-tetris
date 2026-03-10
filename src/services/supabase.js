@@ -78,3 +78,51 @@ export function extractUserId(user) {
   if (!user || !user.email) return '';
   return user.email.replace(`@${EMAIL_DOMAIN}`, '');
 }
+
+// ── Game Records ──
+
+export async function saveGameRecord(score, level, lines) {
+  const sb = getClient();
+  const user = (await sb.auth.getSession()).data?.session?.user;
+  if (!user) return { error: 'Not logged in' };
+
+  const displayName = extractUserId(user);
+  const { error } = await sb.from('game_records').insert({
+    user_id: user.id,
+    display_name: displayName,
+    score,
+    level,
+    lines,
+  });
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
+export async function getLeaderboard(limit = 50) {
+  const sb = getClient();
+  const { data, error } = await sb
+    .from('game_records')
+    .select('display_name, score, level, lines, played_at')
+    .order('score', { ascending: false })
+    .limit(limit);
+
+  if (error) return [];
+  return data || [];
+}
+
+export async function getMyRecords(limit = 10) {
+  const sb = getClient();
+  const user = (await sb.auth.getSession()).data?.session?.user;
+  if (!user) return [];
+
+  const { data, error } = await sb
+    .from('game_records')
+    .select('display_name, score, level, lines, played_at')
+    .eq('user_id', user.id)
+    .order('score', { ascending: false })
+    .limit(limit);
+
+  if (error) return [];
+  return data || [];
+}

@@ -144,6 +144,103 @@ body {
   background: linear-gradient(180deg, #6a2a2a, #3a1313);
 }
 
+/* ── Ranking ── */
+.ranking-section {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+}
+
+.ranking-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.ranking-tab {
+  padding: 5px 8px;
+  border: 1px solid #5f74a6;
+  border-radius: 8px;
+  color: #aab8d8;
+  background: rgba(15, 24, 48, 0.5);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.ranking-tab.active {
+  color: #ecf0ff;
+  border-color: #7fb4ff;
+  background: rgba(40, 75, 144, 0.6);
+}
+
+.ranking-tab:active {
+  transform: translateY(1px);
+}
+
+.ranking-header {
+  display: grid;
+  grid-template-columns: 28px 1fr 60px 30px 30px;
+  gap: 4px;
+  padding: 3px 6px;
+  font-size: 9px;
+  color: #8899bb;
+  border-bottom: 1px solid #3a4e7a;
+}
+
+.ranking-list {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid #3a4e7a;
+  border-radius: 8px;
+  background: rgba(7, 16, 34, 0.7);
+}
+
+.ranking-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 60px 30px 30px;
+  gap: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+  color: #e8edff;
+  border-bottom: 1px solid rgba(58, 78, 122, 0.3);
+}
+
+.ranking-row:last-child {
+  border-bottom: none;
+}
+
+.ranking-row.my-record {
+  background: rgba(40, 75, 144, 0.2);
+  color: #7fb4ff;
+}
+
+.ranking-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-rank {
+  text-align: center;
+  font-weight: 700;
+}
+
+.ranking-score {
+  text-align: right;
+}
+
+.ranking-level,
+.ranking-lines {
+  text-align: center;
+}
+
+.ranking-empty {
+  padding: 12px;
+  text-align: center;
+  font-size: 11px;
+  color: #8899bb;
+}
+
 /* ── Confirm Dialog ── */
 .confirm-dialog {
   position: fixed;

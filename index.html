@@ -36,6 +36,23 @@
             <label for="bgmTrackList">음원 선택</label>
             <div id="bgmTrackList" class="bgm-track-list"></div>
           </div>
+          <!-- Ranking -->
+          <div class="ranking-section">
+            <div class="ranking-tabs">
+              <button id="rankTabAll" type="button" class="ranking-tab active">전체 랭킹</button>
+              <button id="rankTabMy" type="button" class="ranking-tab">내 기록</button>
+            </div>
+            <div class="ranking-header">
+              <span>#</span>
+              <span>이름</span>
+              <span>점수</span>
+              <span>LV</span>
+              <span>줄</span>
+            </div>
+            <div id="rankingList" class="ranking-list">
+              <div class="ranking-empty">기록이 없습니다.</div>
+            </div>
+          </div>
           <button id="lobbyStartBtn" type="button" class="lobby-action-btn lobby-start-btn">게임 시작</button>
           <button id="lobbyLogoutBtn" type="button" class="lobby-action-btn lobby-logout-btn">로그아웃</button>
           <button id="lobbyExitBtn" type="button" class="lobby-action-btn lobby-exit-btn">게임 종료</button>

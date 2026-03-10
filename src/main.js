@@ -27,7 +27,14 @@ import {
 } from './services/audio.js';
 import { pulse, canVibrate, isVibrationEnabled } from './services/vibration.js';
 import { SFX_KEYS } from './constants.js';
-import { login, getCurrentUser, extractUserId } from './services/supabase.js';
+import {
+  login,
+  getCurrentUser,
+  extractUserId,
+  saveGameRecord,
+  getLeaderboard,
+  getMyRecords,
+} from './services/supabase.js';
 import { showScreen, getCurrentScreen } from './screen.js';
 import { showConfirm } from './ui/confirm.js';
 
@@ -60,6 +67,9 @@ const lobbyUserId = document.getElementById('lobbyUserId');
 const lobbyStartBtn = document.getElementById('lobbyStartBtn');
 const lobbyLogoutBtn = document.getElementById('lobbyLogoutBtn');
 const lobbyExitBtn = document.getElementById('lobbyExitBtn');
+const rankTabAll = document.getElementById('rankTabAll');
+const rankTabMy = document.getElementById('rankTabMy');
+const rankingList = document.getElementById('rankingList');
 const bgmTrackSelectContainer = document.getElementById('bgmTrackList');
 const ctx = canvas.getContext('2d');
 const playLayout = document.querySelector('.play-layout');
@@ -671,6 +681,8 @@ function handleEvents(events) {
           pulse(35);
         }
         stopBackgroundMusic();
+        // Save game record (async, non-blocking)
+        saveGameRecord(gameState.score, gameState.level, gameState.lines).catch(() => {});
         break;
       case SFX_KEYS.PAUSE:
         play(SFX_KEYS.PAUSE);
@@ -1169,15 +1181,91 @@ if (loginPwInput) {
   });
 }
 
+// ── Ranking ──
+let currentRankTab = 'all';
+let currentUserId = null;
+
+function renderRanking(records, tab) {
+  if (!rankingList) return;
+  rankingList.innerHTML = '';
+
+  if (!records.length) {
+    const empty = document.createElement('div');
+    empty.className = 'ranking-empty';
+    empty.textContent = '기록이 없습니다.';
+    rankingList.appendChild(empty);
+    return;
+  }
+
+  records.forEach((record, index) => {
+    const row = document.createElement('div');
+    row.className = 'ranking-row';
+    if (tab === 'all' && currentUserId && record.display_name === currentUserId) {
+      row.classList.add('my-record');
+    }
+
+    const rank = document.createElement('span');
+    rank.className = 'ranking-rank';
+    rank.textContent = String(index + 1);
+
+    const name = document.createElement('span');
+    name.className = 'ranking-name';
+    name.textContent = record.display_name || currentUserId || '-';
+
+    const score = document.createElement('span');
+    score.className = 'ranking-score';
+    score.textContent = String(record.score);
+
+    const level = document.createElement('span');
+    level.className = 'ranking-level';
+    level.textContent = String(record.level);
+
+    const lines = document.createElement('span');
+    lines.className = 'ranking-lines';
+    lines.textContent = String(record.lines);
+
+    row.append(rank, name, score, level, lines);
+    rankingList.appendChild(row);
+  });
+}
+
+async function loadRanking(tab) {
+  currentRankTab = tab;
+  if (rankTabAll) rankTabAll.classList.toggle('active', tab === 'all');
+  if (rankTabMy) rankTabMy.classList.toggle('active', tab === 'my');
+
+  if (rankingList) {
+    rankingList.innerHTML = '<div class="ranking-empty">불러오는 중...</div>';
+  }
+
+  try {
+    const records = tab === 'all' ? await getLeaderboard(50) : await getMyRecords(20);
+    renderRanking(records, tab);
+  } catch {
+    if (rankingList) {
+      rankingList.innerHTML = '<div class="ranking-empty">불러오기 실패</div>';
+    }
+  }
+}
+
+if (rankTabAll) {
+  rankTabAll.addEventListener('click', () => loadRanking('all'));
+}
+if (rankTabMy) {
+  rankTabMy.addEventListener('click', () => loadRanking('my'));
+}
+
 // ── Lobby Flow ──
 function navigateToLobby(user) {
   const displayId = extractUserId(user);
+  currentUserId = displayId;
   if (lobbyUserId) {
     lobbyUserId.textContent = displayId ? `${displayId} 님` : '';
   }
   showScreen('lobby');
   loadBgmTrackList();
   updateSettingsTexts();
+  loadRanking(currentRankTab);
 }
 
 function startGameFromLobby() {
@@ -1202,6 +1290,7 @@ function exitToLobby() {
   showScreen('lobby');
   loadBgmTrackList();
   updateSettingsTexts();
+  loadRanking(currentRankTab);
 }
 
 if (lobbyStartBtn) {
