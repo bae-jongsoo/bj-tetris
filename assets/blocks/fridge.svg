@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 240" shape-rendering="crispEdges">
+  <rect width="160" height="240" fill="none"/>
+
+  <!-- Outer shell -->
+  <rect x="4" y="2" width="152" height="236" fill="#5a5f66"/>
+  <rect x="8" y="6" width="144" height="228" fill="#b2b8bf"/>
+
+  <!-- Bespoke diagonal 2-tone doors (white/sage) -->
+  <rect x="10" y="8" width="68" height="120" fill="#f6f5f2"/>
+  <rect x="82" y="8" width="68" height="120" fill="#c9d7cc"/>
+  <rect x="10" y="132" width="68" height="100" fill="#c9d7cc"/>
+  <rect x="82" y="132" width="68" height="100" fill="#f6f5f2"/>
+
+  <!-- Door seams -->
+  <rect x="78" y="8" width="4" height="224" fill="#7b8188"/>
+  <rect x="10" y="128" width="140" height="4" fill="#7b8188"/>
+
+  <!-- Left side highlight -->
+  <rect x="10" y="8" width="8" height="224" fill="#ffffff" opacity="0.22"/>
+
+  <!-- Small Samsung-like badge -->
+  <rect x="98" y="18" width="22" height="8" fill="#20262d"/>
+  <rect x="100" y="20" width="18" height="4" fill="#cfd5dc"/>
+
+  <!-- Feet -->
+  <rect x="26" y="234" width="24" height="4" fill="#3a4048"/>
+  <rect x="110" y="234" width="24" height="4" fill="#3a4048"/>
+</svg>

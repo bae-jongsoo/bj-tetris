@@ -254,6 +254,7 @@ function formatSpecialBlockLabel(type) {
   if (type === 'D') return 'D (똥)';
   if (type === 'd') return 'd (마리오)';
   if (type === 'b') return 'b (루이지)';
+  if (type === 'F') return 'F (양문냉장고)';
   return `Block ${type}`;
 }
 

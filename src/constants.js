@@ -13,7 +13,7 @@ export const VFX_ALL_CLEAR_MS = 2500;
 export const LOCK_DELAY_MS = 200;
 
 export const STANDARD_PIECE_TYPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
-export const SPECIAL_BLOCK_TYPES = ['1', '2', '3', '4', 'D', 'd', 'b'];
+export const SPECIAL_BLOCK_TYPES = ['1', '2', '3', '4', 'D', 'd', 'b', 'F'];
 export const PIECE_TYPES = [...STANDARD_PIECE_TYPES, ...SPECIAL_BLOCK_TYPES];
 
 export const PIECE_SHAPES = {
@@ -60,6 +60,11 @@ export const PIECE_SHAPES = {
     [1, 1],
     [1, 1],
   ],
+  F: [
+    [1, 1],
+    [1, 1],
+    [1, 1],
+  ],
 };
 
 export const PIECE_COLOR = {
@@ -77,6 +82,7 @@ export const PIECE_COLOR = {
   D: '#8b5a2b',
   d: '#d7322d',
   b: '#34a853',
+  F: '#c6dff6',
 };
 
 export const SPECIAL_BLOCK_IMAGES = {
@@ -87,6 +93,7 @@ export const SPECIAL_BLOCK_IMAGES = {
   D: './assets/blocks/poop.svg',
   d: './assets/blocks/d.svg',
   b: './assets/blocks/b.svg',
+  F: './assets/blocks/fridge.svg',
 };
 
 export const SCORE_BY_LINES = [0, 100, 300, 500, 800];
