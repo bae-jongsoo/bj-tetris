@@ -13,7 +13,7 @@ export const VFX_ALL_CLEAR_MS = 2500;
 export const LOCK_DELAY_MS = 200;
 
 export const STANDARD_PIECE_TYPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
-export const SPECIAL_BLOCK_TYPES = ['1', '2', '3', '4', 'P'];
+export const SPECIAL_BLOCK_TYPES = ['1', '2', '3', '4', 'D', 'd'];
 export const PIECE_TYPES = [...STANDARD_PIECE_TYPES, ...SPECIAL_BLOCK_TYPES];
 
 export const PIECE_SHAPES = {
@@ -46,7 +46,12 @@ export const PIECE_SHAPES = {
   2: [[1], [1]],
   3: [[1], [1], [1]],
   4: [[1], [1], [1], [1]],
-  P: [
+  D: [
+    [1, 1],
+    [1, 1],
+  ],
+  d: [
+    [0, 1],
     [1, 1],
     [1, 1],
   ],
@@ -64,7 +69,8 @@ export const PIECE_COLOR = {
   2: '#7ed957',
   3: '#f5b400',
   4: '#ff6aa2',
-  P: '#8b5a2b',
+  D: '#8b5a2b',
+  d: '#d7322d',
 };
 
 export const SPECIAL_BLOCK_IMAGES = {
@@ -72,7 +78,8 @@ export const SPECIAL_BLOCK_IMAGES = {
   2: './assets/blocks/2.png',
   3: './assets/blocks/3.png',
   4: './assets/blocks/4.png',
-  P: './assets/blocks/poop.svg',
+  D: './assets/blocks/poop.svg',
+  d: './assets/blocks/d.svg',
 };
 
 export const SCORE_BY_LINES = [0, 100, 300, 500, 800];

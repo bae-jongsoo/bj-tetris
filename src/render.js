@@ -198,12 +198,28 @@ function drawCell(ctx, x, y, size, color, glow = false, alpha = 1, options = {})
   ctx.restore();
 }
 
-function drawPieceImage(ctx, x, y, width, height, color, type, alpha, glow = false, quarterTurns = 0) {
+function drawPieceImage(ctx, x, y, width, height, color, type, alpha, glow = false, quarterTurns = 0, shape = null) {
   const img = getPieceImage(type);
   const turns = ((quarterTurns % 4) + 4) % 4;
   if (img && img.width > 0 && img.height > 0) {
     ctx.save();
     ctx.globalAlpha = alpha;
+    if (shape && shape.length && shape[0] && shape[0].length) {
+      const cellsY = shape.length;
+      const cellsX = shape[0].length;
+      const cellW = width / cellsX;
+      const cellH = height / cellsY;
+      ctx.beginPath();
+      for (let py = 0; py < cellsY; py += 1) {
+        for (let px = 0; px < cellsX; px += 1) {
+          if (!shape[py][px]) {
+            continue;
+          }
+          ctx.rect(x + px * cellW, y + py * cellH, cellW, cellH);
+        }
+      }
+      ctx.clip();
+    }
     if (turns === 0) {
       ctx.drawImage(img, x, y, width, height);
     } else {
@@ -235,15 +251,13 @@ function drawPieceImage(ctx, x, y, width, height, color, type, alpha, glow = fal
 }
 
 function getSpecialPieceQuarterTurns(piece) {
-  const shapeHeight = piece.shape.length;
-  const shapeWidth = piece.shape[0].length;
-  const isSquare = shapeWidth === shapeHeight;
-
-  if (isSquare) {
+  if (piece.type !== '2' && piece.type !== '3' && piece.type !== '4') {
     return ((piece.rotation || 0) % 4 + 4) % 4;
   }
 
-  // Keep legacy behavior for non-square special blocks: only match board orientation.
+  const shapeHeight = piece.shape.length;
+  const shapeWidth = piece.shape[0].length;
+  // Keep legacy behavior for bar-style special blocks: only match board orientation.
   return shapeWidth > shapeHeight ? 1 : 0;
 }
 
@@ -310,6 +324,7 @@ function drawGhostPiece(state, ctx, layout) {
       0.32,
       false,
       quarterTurns,
+      ghost.shape,
     );
     return;
   }
@@ -366,6 +381,7 @@ function drawNextPiece(state, ctx, layout) {
       1,
       false,
       quarterTurns,
+      piece.shape,
     );
   } else {
     piece.shape.forEach((row, py) => {
@@ -572,6 +588,7 @@ export function render(state, layout, ctx, now = Date.now()) {
         1,
         false,
         quarterTurns,
+        state.active.shape,
       );
     }
     else {
