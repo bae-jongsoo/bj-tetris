@@ -678,6 +678,12 @@ function handleEvents(events) {
           pulse(20);
         }
         break;
+      case 'all_clear':
+        play(SFX_KEYS.LINE_CLEAR_4);
+        if (isVibrationEnabled()) {
+          pulse(30);
+        }
+        break;
       case SFX_KEYS.LEVEL_UP:
         play(SFX_KEYS.LEVEL_UP);
         break;

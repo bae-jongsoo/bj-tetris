@@ -15,6 +15,7 @@ import {
   VFX_LINE_CLEAR_MS,
   VFX_LINE_FADE_MS,
   VFX_IMPACT_MS,
+  VFX_ALL_CLEAR_MS,
   LOCK_DELAY_MS,
 } from './constants.js';
 
@@ -210,6 +211,7 @@ export function createInitialState(options = {}) {
       lineFlashRows: [],
       impactUntil: 0,
       impactRows: [],
+      allClearUntil: 0,
     },
   };
 }
@@ -384,12 +386,29 @@ function removeFullLines(state) {
   return cleared;
 }
 
+function isBoardEmpty(board) {
+  for (let y = 0; y < board.length; y += 1) {
+    for (let x = 0; x < board[y].length; x += 1) {
+      if (board[y][x] !== 0) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 function finishClearing(state) {
   if (!state.clearing) {
     return;
   }
   removeFullLines(state);
   state.clearing = null;
+
+  if (isBoardEmpty(state.board)) {
+    state.vfx.allClearUntil = Date.now() + VFX_ALL_CLEAR_MS;
+    emitEvent(state, 'all_clear');
+  }
+
   spawnNextPiece(state);
 }
 
