@@ -2,7 +2,7 @@ import {
   BOARD_WIDTH,
   VISIBLE_HEIGHT,
   HIDDEN_HEIGHT,
-  NUMBERBLOCKS_IMAGES,
+  SPECIAL_BLOCK_IMAGES,
   VFX_LINE_CLEAR_MS,
   VFX_LINE_FADE_MS,
   VFX_IMPACT_MS,
@@ -10,16 +10,15 @@ import {
 } from './constants.js';
 import { getGhostPiece } from './state.js';
 
-function isNumberBlockType(type) {
-  return !!NUMBERBLOCKS_IMAGES[String(type)];
+function isSpecialBlockType(type) {
+  return !!SPECIAL_BLOCK_IMAGES[String(type)];
 }
 
 const pieceImageCache = new Map();
-const pieceRotatedImageCache = new Map();
 const ANDROID_ASSET_PREFIX = 'file:///android_asset/';
 
 function getPieceImageCandidates(type) {
-  const src = NUMBERBLOCKS_IMAGES[String(type)];
+  const src = SPECIAL_BLOCK_IMAGES[String(type)];
   if (!src) {
     return [];
   }
@@ -67,28 +66,6 @@ function getPieceImage(type) {
   tryNextSource();
   pieceImageCache.set(key, img);
   return img;
-}
-
-function getRotatedPieceImage(type) {
-  const key = `${String(type)}:rot90`;
-  if (pieceRotatedImageCache.has(key)) {
-    return pieceRotatedImageCache.get(key);
-  }
-
-  const img = getPieceImage(type);
-  if (!img || !img.complete || img.naturalWidth <= 0 || img.naturalHeight <= 0) {
-    return null;
-  }
-
-  const rotated = document.createElement('canvas');
-  rotated.width = img.naturalHeight;
-  rotated.height = img.naturalWidth;
-  const rctx = rotated.getContext('2d');
-  rctx.translate(rotated.width / 2, rotated.height / 2);
-  rctx.rotate(Math.PI / 2);
-  rctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2, img.naturalWidth, img.naturalHeight);
-  pieceRotatedImageCache.set(key, rotated);
-  return rotated;
 }
 
 function getCellMeta(cell) {
@@ -195,7 +172,7 @@ function drawCell(ctx, x, y, size, color, glow = false, alpha = 1, options = {})
   const { useImage = false, type = null } = options;
   ctx.save();
   ctx.globalAlpha = alpha;
-  if (useImage && isNumberBlockType(type)) {
+  if (useImage && isSpecialBlockType(type)) {
     const img = getPieceImage(type);
     if (img && img.complete && img.naturalWidth > 0) {
       const ratio = img.naturalWidth / Math.max(1, img.naturalHeight);
@@ -221,12 +198,22 @@ function drawCell(ctx, x, y, size, color, glow = false, alpha = 1, options = {})
   ctx.restore();
 }
 
-function drawPieceImage(ctx, x, y, width, height, color, type, alpha, glow = false, rotate = false) {
-  const img = rotate ? getRotatedPieceImage(type) : getPieceImage(type);
+function drawPieceImage(ctx, x, y, width, height, color, type, alpha, glow = false, quarterTurns = 0) {
+  const img = getPieceImage(type);
+  const turns = ((quarterTurns % 4) + 4) % 4;
   if (img && img.width > 0 && img.height > 0) {
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.drawImage(img, x, y, width, height);
+    if (turns === 0) {
+      ctx.drawImage(img, x, y, width, height);
+    } else {
+      const isOddTurn = turns % 2 === 1;
+      const drawW = isOddTurn ? height : width;
+      const drawH = isOddTurn ? width : height;
+      ctx.translate(x + width / 2, y + height / 2);
+      ctx.rotate((Math.PI / 2) * turns);
+      ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+    }
 
     if (glow) {
       ctx.fillStyle = 'rgba(255,255,255,0.22)';
@@ -245,6 +232,19 @@ function drawPieceImage(ctx, x, y, width, height, color, type, alpha, glow = fal
     ctx.fillRect(x + width * 0.18, y + height * 0.18, width * 0.64, height * 0.64);
   }
   ctx.restore();
+}
+
+function getSpecialPieceQuarterTurns(piece) {
+  const shapeHeight = piece.shape.length;
+  const shapeWidth = piece.shape[0].length;
+  const isSquare = shapeWidth === shapeHeight;
+
+  if (isSquare) {
+    return ((piece.rotation || 0) % 4 + 4) % 4;
+  }
+
+  // Keep legacy behavior for non-square special blocks: only match board orientation.
+  return shapeWidth > shapeHeight ? 1 : 0;
 }
 
 function drawLineClearFlash(ctx, state, layout, now) {
@@ -297,8 +297,8 @@ function drawGhostPiece(state, ctx, layout) {
 
   const { cell } = layout;
   const ghostMeta = getCellMeta(ghost);
-  if (isNumberBlockType(ghostMeta.type)) {
-    const isHorizontal = ghost.shape[0].length > ghost.shape.length;
+  if (isSpecialBlockType(ghostMeta.type)) {
+    const quarterTurns = getSpecialPieceQuarterTurns(ghost);
     drawPieceImage(
       ctx,
       ghost.x * cell,
@@ -308,8 +308,8 @@ function drawGhostPiece(state, ctx, layout) {
       ghostMeta.color,
       ghostMeta.type,
       0.32,
-      true,
-      isHorizontal,
+      false,
+      quarterTurns,
     );
     return;
   }
@@ -353,8 +353,8 @@ function drawNextPiece(state, ctx, layout) {
   ctx.save();
   ctx.translate(pieceOffsetX, pieceOffsetY);
 
-  if (isNumberBlockType(pieceMeta.type)) {
-    const isHorizontal = piece.shape[0].length > piece.shape.length;
+  if (isSpecialBlockType(pieceMeta.type)) {
+    const quarterTurns = getSpecialPieceQuarterTurns(piece);
     drawPieceImage(
       ctx,
       0,
@@ -365,7 +365,7 @@ function drawNextPiece(state, ctx, layout) {
       pieceMeta.type,
       1,
       false,
-      isHorizontal,
+      quarterTurns,
     );
   } else {
     piece.shape.forEach((row, py) => {
@@ -508,6 +508,7 @@ export function render(state, layout, ctx, now = Date.now()) {
   ctx.clearRect(0, 0, boardW, boardH);
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, boardW, boardH);
+  drawGrid(ctx, layout);
 
   const clearingRows = state.clearing ? state.clearing.rows : null;
   let clearingProgress = 0;
@@ -525,7 +526,6 @@ export function render(state, layout, ctx, now = Date.now()) {
         continue;
       }
       const boardMeta = getCellMeta(boardCell);
-
       if (isClearing) {
         // Fade out: full alpha at start → 0 at end
         const alpha = Math.max(0, 1 - clearingProgress);
@@ -559,8 +559,8 @@ export function render(state, layout, ctx, now = Date.now()) {
     drawGhostPiece(state, ctx, layout);
     const activeMeta = getCellMeta(state.active);
 
-    if (isNumberBlockType(activeMeta.type)) {
-      const isHorizontal = state.active.shape[0].length > state.active.shape.length;
+    if (isSpecialBlockType(activeMeta.type)) {
+      const quarterTurns = getSpecialPieceQuarterTurns(state.active);
       drawPieceImage(
         ctx,
         state.active.x * cell,
@@ -570,8 +570,8 @@ export function render(state, layout, ctx, now = Date.now()) {
         activeMeta.color,
         activeMeta.type,
         1,
-        true,
-        isHorizontal,
+        false,
+        quarterTurns,
       );
     }
     else {
@@ -591,6 +591,5 @@ export function render(state, layout, ctx, now = Date.now()) {
     }
   }
 
-  drawGrid(ctx, layout);
   drawAllClear(ctx, state, layout, now);
 }

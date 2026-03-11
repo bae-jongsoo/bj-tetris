@@ -13,8 +13,8 @@ export const VFX_ALL_CLEAR_MS = 2500;
 export const LOCK_DELAY_MS = 200;
 
 export const STANDARD_PIECE_TYPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
-export const NUMBERBLOCK_TYPES = ['1', '2', '3', '4'];
-export const PIECE_TYPES = [...STANDARD_PIECE_TYPES, ...NUMBERBLOCK_TYPES];
+export const SPECIAL_BLOCK_TYPES = ['1', '2', '3', '4', 'P'];
+export const PIECE_TYPES = [...STANDARD_PIECE_TYPES, ...SPECIAL_BLOCK_TYPES];
 
 export const PIECE_SHAPES = {
   I: [[1, 1, 1, 1]],
@@ -46,6 +46,10 @@ export const PIECE_SHAPES = {
   2: [[1], [1]],
   3: [[1], [1], [1]],
   4: [[1], [1], [1], [1]],
+  P: [
+    [1, 1],
+    [1, 1],
+  ],
 };
 
 export const PIECE_COLOR = {
@@ -60,13 +64,15 @@ export const PIECE_COLOR = {
   2: '#7ed957',
   3: '#f5b400',
   4: '#ff6aa2',
+  P: '#8b5a2b',
 };
 
-export const NUMBERBLOCKS_IMAGES = {
+export const SPECIAL_BLOCK_IMAGES = {
   1: './assets/blocks/1.png',
   2: './assets/blocks/2.png',
   3: './assets/blocks/3.png',
   4: './assets/blocks/4.png',
+  P: './assets/blocks/poop.svg',
 };
 
 export const SCORE_BY_LINES = [0, 100, 300, 500, 800];

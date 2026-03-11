@@ -56,7 +56,7 @@ const ctrlRotate = document.getElementById('ctrlRotate');
 const ctrlSoft = document.getElementById('ctrlSoft');
 const ctrlHard = document.getElementById('ctrlHard');
 const ctrlPause = document.getElementById('ctrlPause');
-const toggleNumberBlocksBtn = document.getElementById('toggleNumberBlocksBtn');
+const toggleSpecialBlocksBtn = document.getElementById('toggleSpecialBlocksBtn');
 const toggleBgmBtn = document.getElementById('toggleBgmBtn');
 const exitToLobbyBtn = document.getElementById('exitToLobbyBtn');
 const loginBtn = document.getElementById('loginBtn');
@@ -90,18 +90,19 @@ const ROTATE_DEBOUNCE_MS = 120;
 const BOARD_TOUCH_THRESHOLD = 14;
 const BOARD_TOUCH_UP_HARD_DROP_MIN = 28;
 
-const NUMBER_BLOCKS_STORAGE_KEY = 'tetris.numberBlocksEnabled';
+const SPECIAL_BLOCKS_STORAGE_KEY = 'tetris.specialBlocksEnabled';
+const LEGACY_SPECIAL_BLOCKS_STORAGE_KEY = 'tetris.numberBlocksEnabled';
 const MUSIC_ENABLED_STORAGE_KEY = 'tetris.musicEnabled';
 const BGM_TRACK_INDEX_STORAGE_KEY = 'tetris.bgmTrackIndex';
 const MAX_BGM_TRACK_LABEL_LENGTH = 26;
 let gameState = createInitialState({
-  numberBlocksEnabled: readNumberBlockSetting(),
+  specialBlocksEnabled: readSpecialBlockSetting(),
 });
 let lastTime = 0;
 let layout = resizeCanvas(canvas);
 let nextLayout = resizeNextCanvas(nextCanvas);
 let bgmTrackNames = [];
-let numberBlocksEnabled = gameState.numberBlocksEnabled;
+let specialBlocksEnabled = gameState.specialBlocksEnabled;
 let musicEnabled = readMusicEnabledSetting();
 let selectedBgmTrackIndexes = readBgmTrackSelection();
 let pointerLock = false;
@@ -125,21 +126,26 @@ const boardMovePointers = new Map();
 setMusicEnabled(musicEnabled);
 setBgmTrackIndex(selectedBgmTrackIndexes);
 
-function readNumberBlockSetting() {
+function readSpecialBlockSetting() {
   try {
-    const value = localStorage.getItem(NUMBER_BLOCKS_STORAGE_KEY);
-    if (value === null) {
-      return true;
+    const value = localStorage.getItem(SPECIAL_BLOCKS_STORAGE_KEY);
+    if (value !== null) {
+      return value === 'true';
     }
-    return value === 'true';
+    const legacyValue = localStorage.getItem(LEGACY_SPECIAL_BLOCKS_STORAGE_KEY);
+    if (legacyValue !== null) {
+      return legacyValue === 'true';
+    }
+    return true;
   } catch {
     return true;
   }
 }
 
-function persistNumberBlockSetting(value) {
+function persistSpecialBlockSetting(value) {
   try {
-    localStorage.setItem(NUMBER_BLOCKS_STORAGE_KEY, String(!!value));
+    localStorage.setItem(SPECIAL_BLOCKS_STORAGE_KEY, String(!!value));
+    localStorage.setItem(LEGACY_SPECIAL_BLOCKS_STORAGE_KEY, String(!!value));
   } catch {}
 }
 
@@ -270,8 +276,8 @@ function formatTrackLabel(track) {
 }
 
 function updateSettingsTexts() {
-  if (toggleNumberBlocksBtn) {
-    toggleNumberBlocksBtn.textContent = `NUMBER BLOCKS ${numberBlocksEnabled ? 'ON' : 'OFF'}`;
+  if (toggleSpecialBlocksBtn) {
+    toggleSpecialBlocksBtn.textContent = `SPECIAL BLOCKS ${specialBlocksEnabled ? 'ON' : 'OFF'}`;
   }
   if (toggleBgmBtn) {
     toggleBgmBtn.textContent = `BGM ${musicEnabled ? 'ON' : 'OFF'}`;
@@ -522,7 +528,7 @@ function updateOverlay() {
 
 function hardRestart() {
   gameState = createInitialState({
-    numberBlocksEnabled,
+    specialBlocksEnabled,
   });
   ensureAudioReady();
   gameState.status = 'playing';
@@ -567,9 +573,9 @@ function onOverlayAction() {
   }
 }
 
-function toggleNumberBlocks() {
-  numberBlocksEnabled = !numberBlocksEnabled;
-  persistNumberBlockSetting(numberBlocksEnabled);
+function toggleSpecialBlocks() {
+  specialBlocksEnabled = !specialBlocksEnabled;
+  persistSpecialBlockSetting(specialBlocksEnabled);
   applyHud();
   updateSettingsTexts();
 }
@@ -1125,10 +1131,10 @@ if (bgmTrackSelectContainer) {
 }
 restartBtn.addEventListener('click', onStartClick);
 restartBtn.addEventListener('pointerdown', onStartClick);
-if (toggleNumberBlocksBtn) {
-  toggleNumberBlocksBtn.addEventListener('pointerdown', (event) => {
+if (toggleSpecialBlocksBtn) {
+  toggleSpecialBlocksBtn.addEventListener('pointerdown', (event) => {
     event.preventDefault();
-    toggleNumberBlocks();
+    toggleSpecialBlocks();
   });
 }
 if (boardArea) {
@@ -1326,7 +1332,7 @@ function navigateToLobby(user) {
 }
 
 function startGameFromLobby() {
-  gameState = createInitialState({ numberBlocksEnabled });
+  gameState = createInitialState({ specialBlocksEnabled });
   gameState.status = 'playing';
   ensureAudioReady();
   startBackgroundMusic();
@@ -1343,7 +1349,7 @@ function startGameFromLobby() {
 function exitToLobby() {
   stopBackgroundMusic();
   stopAllMovementInputs();
-  gameState = createInitialState({ numberBlocksEnabled });
+  gameState = createInitialState({ specialBlocksEnabled });
   hideSettingsPopup();
   hideRankingPopup();
   showScreen('lobby');

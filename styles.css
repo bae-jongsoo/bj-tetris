@@ -566,7 +566,7 @@ body {
   box-sizing: border-box;
 }
 
-#toggleNumberBlocksBtn,
+#toggleSpecialBlocksBtn,
 #toggleBgmBtn {
   border: 1px solid #6f87bf;
   color: #ecf0ff;

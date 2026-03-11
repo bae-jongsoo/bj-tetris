@@ -4,7 +4,7 @@ import {
   HIDDEN_HEIGHT,
   PIECE_TYPES,
   STANDARD_PIECE_TYPES,
-  NUMBERBLOCK_TYPES,
+  SPECIAL_BLOCK_TYPES,
   PIECE_SHAPES,
   PIECE_COLOR,
   BASE_DROP_MS,
@@ -36,20 +36,20 @@ function getRandomItem(items) {
   return items[index];
 }
 
-function getAvailablePieceTypes(includeNumberBlocks) {
-  return includeNumberBlocks ? PIECE_TYPES : STANDARD_PIECE_TYPES;
+function getAvailablePieceTypes(includeSpecialBlocks) {
+  return includeSpecialBlocks ? PIECE_TYPES : STANDARD_PIECE_TYPES;
 }
 
-function isNumberBlockType(type) {
-  return NUMBERBLOCK_TYPES.includes(String(type));
+function isSpecialBlockType(type) {
+  return SPECIAL_BLOCK_TYPES.includes(String(type));
 }
 
 export function makeBoard() {
   return Array.from({ length: BOARD_HEIGHT }, () => Array(BOARD_WIDTH).fill(0));
 }
 
-function randomPieceType(includeNumberBlocks = true) {
-  const pieceTypes = getAvailablePieceTypes(includeNumberBlocks);
+function randomPieceType(includeSpecialBlocks = true) {
+  const pieceTypes = getAvailablePieceTypes(includeSpecialBlocks);
   return getRandomItem(pieceTypes);
 }
 
@@ -74,14 +74,15 @@ function computeDropMs(level) {
   return Math.max(MIN_DROP_MS, Math.floor(BASE_DROP_MS * Math.pow(0.9, level - 1)));
 }
 
-function createPiece(type, includeNumberBlocks = true) {
-  const pieceType = String(type || randomPieceType(includeNumberBlocks));
+function createPiece(type, includeSpecialBlocks = true) {
+  const pieceType = String(type || randomPieceType(includeSpecialBlocks));
   const shape = cloneShape(PIECE_SHAPES[pieceType]);
   const width = shape[0].length;
 
   return {
     type: pieceType,
     shape,
+    rotation: 0,
     color: PIECE_COLOR[pieceType],
     pieceId: getNextPieceSerial(),
     x: Math.floor((BOARD_WIDTH - width) / 2),
@@ -98,34 +99,35 @@ function replaceWithRegularPiece(piece) {
     ...piece,
     type: pieceType,
     shape,
+    rotation: 0,
     color: PIECE_COLOR[pieceType],
     pieceId: getNextPieceSerial(),
     x: Math.min(Math.max(0, piece.x), BOARD_WIDTH - width),
   };
 }
 
-export function setNumberBlocksEnabled(state, enabled) {
+export function setSpecialBlocksEnabled(state, enabled) {
   const nextValue = !!enabled;
-  if (state.numberBlocksEnabled === nextValue) {
+  if (state.specialBlocksEnabled === nextValue) {
     return;
   }
-  state.numberBlocksEnabled = nextValue;
+  state.specialBlocksEnabled = nextValue;
 
   if (!nextValue) {
-    if (state.active && isNumberBlockType(state.active.type)) {
+    if (state.active && isSpecialBlockType(state.active.type)) {
       const convertedActive = replaceWithRegularPiece(state.active);
       if (canPlacePiece(state, convertedActive)) {
         state.active = convertedActive;
       }
     }
-    if (state.next && isNumberBlockType(state.next.type)) {
+    if (state.next && isSpecialBlockType(state.next.type)) {
       state.next = createPiece(undefined, false);
     }
     return;
   }
 
   if (!state.next) {
-    state.next = createPiece(undefined, state.numberBlocksEnabled);
+    state.next = createPiece(undefined, state.specialBlocksEnabled);
   }
 }
 
@@ -187,14 +189,14 @@ function setImpactVfx(state) {
 }
 
 export function createInitialState(options = {}) {
-  const numberBlocksEnabled = options.numberBlocksEnabled !== false;
+  const specialBlocksEnabled = options.specialBlocksEnabled !== false;
   pieceSerial = 1;
   return {
     status: 'idle',
     board: makeBoard(),
-    numberBlocksEnabled,
-    active: createPiece(undefined, numberBlocksEnabled),
-    next: createPiece(undefined, numberBlocksEnabled),
+    specialBlocksEnabled,
+    active: createPiece(undefined, specialBlocksEnabled),
+    next: createPiece(undefined, specialBlocksEnabled),
     score: 0,
     lines: 0,
     level: 1,
@@ -340,7 +342,7 @@ function clearFullLines(state) {
 
 export function spawnNextPiece(state) {
   state.active = state.next;
-  state.next = createPiece(undefined, state.numberBlocksEnabled);
+  state.next = createPiece(undefined, state.specialBlocksEnabled);
   state.groundedAt = null;
   emitEvent(state, 'piece_spawned');
   if (!canPlacePiece(state, state.active)) {
@@ -474,9 +476,11 @@ export function rotateActivePiece(state) {
     return false;
   }
 
+  const nextRotation = ((state.active.rotation || 0) + 1) % 4;
   const rotated = {
     ...state.active,
     shape: rotateShapeCW(state.active.shape),
+    rotation: nextRotation,
   };
 
   const attempts = [
