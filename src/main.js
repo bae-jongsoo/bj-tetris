@@ -251,8 +251,9 @@ function normalizeSelectedTrackIndexes(raw = []) {
 }
 
 function formatSpecialBlockLabel(type) {
-  if (type === 'D') return 'D (Poop)';
-  if (type === 'd') return 'd (Mario)';
+  if (type === 'D') return 'D (똥)';
+  if (type === 'd') return 'd (마리오)';
+  if (type === 'b') return 'b (루이지)';
   return `Block ${type}`;
 }
 
